@@ -227,10 +227,9 @@ executor.execute {
 
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
+        executor.execute { Telegram.send("<i>Monitor encerrado</i>") }
         executor.shutdown()
-        Telegram.send("<i>Monitor encerrado</i>")
         super.onDestroy()
     }
-
     override fun onBind(intent: Intent?): IBinder? = null
 }
