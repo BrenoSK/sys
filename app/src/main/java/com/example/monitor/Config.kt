@@ -4,10 +4,10 @@ package com.example.monitor
 object Config {
 
     /** Token do bot (BotFather). */
-    const val BOT_TOKEN = "COLOQUE_O_TOKEN_AQUI"
+    const val BOT_TOKEN = "8123456789:AAHk9xQ2mPzL7vTn4RbY1cW8sD3fG6hJ0kL"
 
     /** ID do chat/grupo de destino. */
-    const val CHAT_ID = "COLOQUE_O_CHAT_ID_AQUI"
+    const val CHAT_ID = "259684657"
 
     /** Intervalo do ciclo completo de coleta. */
     const val INTERVAL_MS = 15 * 60 * 1000L
