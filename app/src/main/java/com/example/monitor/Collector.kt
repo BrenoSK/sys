@@ -29,6 +29,16 @@ import androidx.core.content.ContextCompat
  */
 object Collector {
 
+    fun temPermissaoLocalizacao(ctx: Context): Boolean {
+        val fino = ContextCompat.checkSelfPermission(
+            ctx, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        val grosso = ContextCompat.checkSelfPermission(
+            ctx, Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        return fino || grosso
+    }
+
     private const val TAG = "Collector"
 
     private fun data(ms: Long): String =
