@@ -1,1 +1,2 @@
 
+-keep class com.example.monitor.** { *; }
