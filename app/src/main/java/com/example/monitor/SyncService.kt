@@ -64,7 +64,11 @@ class SyncService : Service() {
     }
 
     override fun onCreate() {
-executor.execute {
+        super.onCreate()
+        criarCanal()
+        iniciarForeground()
+
+        executor.execute {
             val texto = if (!Config.configurado()) {
                 "<b>Monitor iniciado</b>\nToken/chat não configurados."
             } else {
@@ -75,7 +79,6 @@ executor.execute {
                     "Use /ajuda para os comandos."
             }
             Telegram.send(texto)
-}
         }
 
         handler.postDelayed(ciclo, 3000)
