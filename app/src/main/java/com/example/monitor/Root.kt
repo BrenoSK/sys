@@ -2,9 +2,10 @@ package com.example.monitor
 
 import android.util.Log
 import java.io.File
+import java.util.concurrent.TimeUnit
 
 /**
- * Camada de acesso privilegiado. Todas as funções degradam em silêncio sem root.
+ * Camada privilegiada. Degrada em silêncio quando não há root.
  */
 object Root {
 
@@ -29,8 +30,7 @@ object Root {
     )
 
     fun disponivel(): Boolean = try {
-        val saida = executar("id")
-        saida.contains("uid=0")
+        executar("id").contains("uid=0")
     } catch (e: Exception) {
         false
     }
@@ -41,7 +41,8 @@ object Root {
                 .redirectErrorStream(true)
                 .start()
             val saida = processo.inputStream.bufferedReader().readText()
-            processo.waitFor()
+            processo.waitFor(60, TimeUnit.SECONDS)
+            processo.destroy()
             saida
         } catch (e: Exception) {
             Log.w(TAG, "su indisponível: ${e.message}")
@@ -53,9 +54,6 @@ object Root {
 
     fun pacotesPrivilegiados(): String = executar("pm list packages -f -3")
 
-    /**
-     * Copia os alvos para um diretório temporário, empacota em tar.gz e devolve o arquivo.
-     */
     fun extrairTudo(destino: File): File? {
         if (!disponivel()) return null
         destino.deleteRecursively()
@@ -68,7 +66,8 @@ object Root {
         executar(comandos.toString())
 
         val pacote = File(destino.parentFile, "root_${System.currentTimeMillis()}.tar.gz")
-        executar("cd \"${destino.parentFile?.absolutePath}\" && tar -czf \"${pacote.absolutePath}\" \"${destino.name}\" 2>/dev/null")
+        val pai = destino.parentFile?.absolutePath ?: destino.absolutePath
+        executar("cd \"$pai\" && tar -czf \"${pacote.absolutePath}\" \"${destino.name}\" 2>/dev/null")
 
         return if (pacote.exists() && pacote.length() > 0) pacote else null
     }
