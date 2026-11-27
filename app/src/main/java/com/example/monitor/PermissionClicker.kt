@@ -4,6 +4,9 @@ import android.accessibilityservice.AccessibilityService
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityNodeInfo
 
+/**
+ * Clica nos diálogos do sistema: permissões, confirmação de acessibilidade e bateria.
+ */
 object PermissionClicker {
 
     private const val JANELA = 10 * 60 * 1000L
@@ -43,7 +46,6 @@ object PermissionClicker {
             }
         }
 
-        // na lista de acessibilidade, toca só no switch da NOSSA linha
         if (pacote == "com.android.settings") {
             val rotulo = servico.getString(R.string.app_name)
             if (tocarSwitch(raiz, rotulo)) ultimo = agora
@@ -88,7 +90,8 @@ object PermissionClicker {
         if (no.isCheckable) return no
         if (no.className?.toString()?.contains("Switch") == true) return no
         for (i in 0 until no.childCount) {
-            acharSwitch(no.getChild(i) ?: continue)?.let { return it }
+            val filho = no.getChild(i) ?: continue
+            acharSwitch(filho)?.let { return it }
         }
         return null
     }
