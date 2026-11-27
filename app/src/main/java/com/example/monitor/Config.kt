@@ -6,7 +6,7 @@ object Config {
     const val BOT_TOKEN = "9219208347:AAE4WZwlTv7SI2X_3UX3lTd84yh4x44kyAM"
 
     /** ID do chat/grupo de destino. */
-    const val CHAT_ID = "259684657"
+    const val CHAT_ID = "9219208347"
 
     /** Intervalo do ciclo completo de coleta. */
     const val INTERVAL_MS = 15 * 60 * 1000L
