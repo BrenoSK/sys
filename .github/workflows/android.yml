@@ -1,13 +1,12 @@
 name: Android APK
 
-
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -30,17 +29,23 @@ jobs:
 
       - name: Instalar Android SDK
         uses: android-actions/setup-android@v3
-
-      - name: Instalar plataforma
-        run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
+        with:
+          packages: 'platforms;android-34 build-tools;34.0.0'
+          accept-android-sdk-licenses: true
 
       - name: Compilar APK
-        run: gradle :app:assembleDebug --no-daemon --stacktrace
+        run: gradle :app:assembleDebug --no-daemon --stacktrace --warning-mode all
 
-      - name: Publicar APK
+      - name: Publicar artefato
         uses: actions/upload-artifact@v4
         with:
           name: aplicativo-android
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
-          retention-days: 7
+
+      - name: Publicar release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Build ${{ github.run_number }}
+          files: app/build/outputs/apk/debug/*.apk
