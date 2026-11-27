@@ -1,4 +1,3 @@
-
 package com.example.monitor
 
 import android.content.BroadcastReceiver
