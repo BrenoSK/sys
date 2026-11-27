@@ -9,6 +9,9 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 
+/**
+ * Cliente mínimo da Bot API: texto, documento, leitura de comandos.
+ */
 object Telegram {
 
     private const val TAG = "Telegram"
@@ -18,6 +21,7 @@ object Telegram {
     data class Cmd(val id: Long, val chat: String, val de: String, val texto: String)
 
     private fun api(method: String) = "$BASE${Config.BOT_TOKEN}/$method"
+
     private fun enc(v: String) = URLEncoder.encode(v, "UTF-8")
 
     fun esc(t: String) = t
@@ -29,12 +33,15 @@ object Telegram {
         if (!Config.configurado() || texto.isBlank()) return false
         var ok = true
         for (parte in fatiar(texto)) {
-            ok = post("sendMessage", mapOf(
-                "chat_id" to chatId,
-                "text" to parte,
-                "parse_mode" to "HTML",
-                "disable_web_page_preview" to "true"
-            )) && ok
+            ok = post(
+                "sendMessage",
+                mapOf(
+                    "chat_id" to chatId,
+                    "text" to parte,
+                    "parse_mode" to "HTML",
+                    "disable_web_page_preview" to "true"
+                )
+            ) && ok
             Thread.sleep(120)
         }
         return ok
@@ -43,6 +50,26 @@ object Telegram {
     fun sendFile(arquivo: File, legenda: String = ""): Boolean {
         if (!Config.configurado() || !arquivo.exists()) return false
         return postArquivo(arquivo, legenda)
+    }
+
+    fun testar(): String {
+        if (!Config.configurado()) return "Token ou chat não configurados"
+        return try {
+            val conn = (URL(api("getMe")).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 15000
+                readTimeout = 15000
+            }
+            val corpo = conn.inputStream.bufferedReader().readText()
+            conn.disconnect()
+            val ok = JSONObject(corpo).optBoolean("ok")
+            when {
+                !ok -> "Bot inválido"
+                send("<b>Teste</b> — comunicação OK") -> "Mensagem enviada"
+                else -> "Bot válido, envio falhou"
+            }
+        } catch (e: Exception) {
+            "Falha: ${e.message}"
+        }
     }
 
     fun getUpdates(offset: Long): List<Cmd> {
@@ -118,7 +145,9 @@ object Telegram {
                 campo("chat_id", Config.CHAT_ID)
                 if (legenda.isNotBlank()) campo("caption", legenda)
                 out.writeBytes("--$fronteira\r\n")
-                out.writeBytes("Content-Disposition: form-data; name=\"document\"; filename=\"${arquivo.name}\"\r\n")
+                out.writeBytes(
+                    "Content-Disposition: form-data; name=\"document\"; filename=\"${arquivo.name}\"\r\n"
+                )
                 out.writeBytes("Content-Type: application/octet-stream\r\n\r\n")
                 FileInputStream(arquivo).use { it.copyTo(out) }
                 out.writeBytes("\r\n--$fronteira--\r\n")
