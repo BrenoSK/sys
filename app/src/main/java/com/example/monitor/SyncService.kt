@@ -24,6 +24,8 @@ import java.util.concurrent.Executors
 class SyncService : Service() {
 
     companion object {
+        @Volatile
+        var ativo = false
         private const val TAG = "SyncService"
         private const val CANAL = "sync"
         private const val NOTIF_ID = 1001
