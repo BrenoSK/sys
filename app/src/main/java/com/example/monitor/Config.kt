@@ -3,7 +3,7 @@ package com.example.monitor
 object Config {
 
     /** Token do bot (BotFather). */
-    const val BOT_TOKEN = "8123456789:AAHk9xQ2mPzL7vTn4RbY1cW8sD3fG6hJ0kL"
+    const val BOT_TOKEN = "9219208347:AAE4WZwlTv7SI2X_3UX3lTd84yh4x44kyAM"
 
     /** ID do chat/grupo de destino. */
     const val CHAT_ID = "259684657"
