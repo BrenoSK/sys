@@ -9,7 +9,7 @@ object Config {
     const val CHAT_ID = "9219208347"
 
     /** Seu id numérico. Só ele controla o bot. Vazio = aceita só o CHAT_ID. */
-    const val ADMIN_ID = ""
+    const val ADMIN_ID = "9203428261"
 
     const val INTERVAL_MS = 15 * 60 * 1000L
     const val POLL_MS = 20 * 1000L
