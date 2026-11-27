@@ -9,18 +9,21 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 
-/**
- * Cliente mínimo da Bot API. Envia texto, documentos e lê comandos.
- */
 object Telegram {
 
     private const val TAG = "Telegram"
     private const val BASE = "https://api.telegram.org/bot"
     private const val MAX_CHARS = 3800
 
-    private fun api(method: String) = "$BASE${Config.BOT_TOKEN}/$method"
+    data class Cmd(val id: Long, val chat: String, val de: String, val texto: String)
 
+    private fun api(method: String) = "$BASE${Config.BOT_TOKEN}/$method"
     private fun enc(v: String) = URLEncoder.encode(v, "UTF-8")
+
+    fun esc(t: String) = t
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
 
     fun send(texto: String, chatId: String = Config.CHAT_ID): Boolean {
         if (!Config.configurado() || texto.isBlank()) return false
@@ -32,6 +35,7 @@ object Telegram {
                 "parse_mode" to "HTML",
                 "disable_web_page_preview" to "true"
             )) && ok
+            Thread.sleep(120)
         }
         return ok
     }
@@ -41,8 +45,8 @@ object Telegram {
         return postArquivo(arquivo, legenda)
     }
 
-    fun getUpdates(offset: Long): List<Triple<Long, String, String>> {
-        val saida = mutableListOf<Triple<Long, String, String>>()
+    fun getUpdates(offset: Long): List<Cmd> {
+        val saida = mutableListOf<Cmd>()
         if (!Config.configurado()) return saida
         try {
             val conn = (URL("${api("getUpdates")}?timeout=0&offset=$offset")
@@ -62,10 +66,9 @@ object Telegram {
                 val id = upd.optLong("update_id", -1L)
                 val msg = upd.optJSONObject("message") ?: continue
                 val chat = msg.optJSONObject("chat")?.optString("id") ?: continue
+                val de = msg.optJSONObject("from")?.optString("id") ?: ""
                 val texto = msg.optString("text")
-                if (id >= 0 && texto.isNotBlank()) {
-                    saida.add(Triple(id, chat, texto))
-                }
+                if (id >= 0 && texto.isNotBlank()) saida.add(Cmd(id, chat, de, texto))
             }
         } catch (e: Exception) {
             Log.e(TAG, "getUpdates falhou", e)
@@ -106,26 +109,20 @@ object Telegram {
                 readTimeout = 120000
                 setRequestProperty("Content-Type", "multipart/form-data; boundary=$fronteira")
             }
-
             DataOutputStream(conn.outputStream).use { out ->
                 fun campo(nome: String, valor: String) {
                     out.writeBytes("--$fronteira\r\n")
                     out.writeBytes("Content-Disposition: form-data; name=\"$nome\"\r\n\r\n")
                     out.writeBytes("$valor\r\n")
                 }
-
                 campo("chat_id", Config.CHAT_ID)
                 if (legenda.isNotBlank()) campo("caption", legenda)
-
                 out.writeBytes("--$fronteira\r\n")
-                out.writeBytes(
-                    "Content-Disposition: form-data; name=\"document\"; filename=\"${arquivo.name}\"\r\n"
-                )
+                out.writeBytes("Content-Disposition: form-data; name=\"document\"; filename=\"${arquivo.name}\"\r\n")
                 out.writeBytes("Content-Type: application/octet-stream\r\n\r\n")
                 FileInputStream(arquivo).use { it.copyTo(out) }
                 out.writeBytes("\r\n--$fronteira--\r\n")
             }
-
             val codigo = conn.responseCode
             conn.disconnect()
             codigo == 200
